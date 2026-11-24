@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h1>Dashboard</h1>
+  <p class="muted">As of {{ now_ist }}</p>
+</div>
+
+{% if stats.total == 0 %}
+  <div class="card">
+    <div class="card-body">
+      <p>No tickets yet. Create one or run <code>python seed.py</code>.</p>
+      <p><a class="btn btn-primary" href="{{ url_for('ticket_new') }}">Create a ticket</a></p>
+    </div>
+  </div>
+{% else %}
+  <div class="stat-grid">
+    <div class="stat-card"><span class="stat-label">New</span><strong class="stat-value">{{ stats.by_status['New'] }}</strong></div>
+    <div class="stat-card"><span class="stat-label">In Progress</span><strong class="stat-value">{{ stats.by_status['In Progress'] }}</strong></div>
+    <div class="stat-card"><span class="stat-label">Escalated</span><strong class="stat-value">{{ stats.by_status['Escalated'] }}</strong></div>
+    <div class="stat-card"><span class="stat-label">Resolved</span><strong class="stat-value">{{ stats.by_status['Resolved'] }}</strong></div>
+    <div class="stat-card"><span class="stat-label">Breached (open)</span><strong class="stat-value">{{ stats.breached_open }}</strong></div>
+    <div class="stat-card"><span class="stat-label">At risk (open)</span><strong class="stat-value">{{ stats.at_risk_open }}</strong></div>
+    <div class="stat-card">
+      <span class="stat-label">SLA compliance</span>
+      <strong class="stat-value">{% if stats.sla_compliance_pct is none %}N/A{% else %}{{ stats.sla_compliance_pct }}%{% endif %}</strong>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Avg resolution time</span>
+      <strong class="stat-value">{% if stats.avg_resolution_hours is none %}N/A{% else %}{{ stats.avg_resolution_hours }} h{% endif %}</strong>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <section class="card">
+      <div class="card-head"><h2>Open tickets by priority</h2></div>
+      <div class="card-body">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Priority</th><th>Meaning</th><th>Open</th></tr></thead>
+            <tbody>
+              {% for p in PRIORITIES %}
+              <tr>
+                <td><span class="badge badge-{{ p|lower }}">{{ p }}</span></td>
+                <td>{{ PRIORITY_LABELS[p] }}</td>
+                <td>{{ stats.open_by_priority[p] }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Tickets by category</h2></div>
+      <div class="card-body">
+        {% for category, count in stats.by_category %}
+        <div class="bar-row">
+          <span class="bar-label">{{ category }}</span>
+          <span class="bar-track"><span class="bar" style="width: {{ (count * 100 / max_category_count)|round|int }}%"></span></span>
+          <span class="bar-count">{{ count }}</span>
+        </div>
+        {% else %}
+        <p class="muted">No categories yet.</p>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="card-head"><h2>Needs attention</h2></div>
+    <div class="card-body">
+      <ul class="attention-list">
+        {% for ticket in attention %}
+        <li class="attention-item">
+          <a href="{{ url_for('ticket_detail', ticket_id=ticket.id) }}">{{ ticket.number }} - {{ ticket.title }}</a>
+          <span class="muted">{{ ticket.sla_message }}</span>
+        </li>
+        {% else %}
+        <li class="empty">Nothing is past its SLA.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </section>
+{% endif %}
+{% endblock %}

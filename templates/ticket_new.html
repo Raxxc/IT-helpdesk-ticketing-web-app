@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h1>New ticket</h1>
+  <p class="muted">Log an incident so it can be tracked against its SLA.</p>
+</div>
+
+<section class="card">
+  <div class="card-body">
+    <form method="post" action="{{ url_for('ticket_new') }}">
+      <div class="form-grid">
+        <div class="field">
+          <label for="requester_name">Requester name</label>
+          <input id="requester_name" name="requester_name" type="text" maxlength="80" value="{{ form.requester_name|default('') }}">
+          {% if errors.requester_name %}<p class="field-error">{{ errors.requester_name }}</p>{% endif %}
+        </div>
+
+        <div class="field">
+          <label for="requester_email">Requester email</label>
+          <input id="requester_email" name="requester_email" type="email" maxlength="120" value="{{ form.requester_email|default('') }}">
+          {% if errors.requester_email %}<p class="field-error">{{ errors.requester_email }}</p>{% endif %}
+        </div>
+
+        <div class="field">
+          <label for="category">Category</label>
+          <select id="category" name="category">
+            <option value="" disabled selected>Select...</option>
+            {% for c in CATEGORIES %}
+            <option value="{{ c }}" {% if form.category == c %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+          </select>
+          {% if errors.category %}<p class="field-error">{{ errors.category }}</p>{% endif %}
+        </div>
+
+        <div class="field">
+          <label for="priority">Priority</label>
+          <select id="priority" name="priority">
+            {% for p in PRIORITIES %}
+            <option value="{{ p }}" {% if form.priority == p %}selected{% endif %}>{{ p }} - {{ PRIORITY_LABELS[p] }} ({{ SLA_HOURS[p] }}h)</option>
+            {% endfor %}
+          </select>
+          {% if errors.priority %}<p class="field-error">{{ errors.priority }}</p>{% endif %}
+        </div>
+
+        <div class="field field-wide">
+          <label for="title">Title</label>
+          <input id="title" name="title" type="text" maxlength="120" value="{{ form.title|default('') }}">
+          {% if errors.title %}<p class="field-error">{{ errors.title }}</p>{% endif %}
+        </div>
+
+        <div class="field field-wide">
+          <label for="description">Description</label>
+          <textarea id="description" name="description" rows="6" maxlength="2000">{{ form.description|default('') }}</textarea>
+          {% if errors.description %}<p class="field-error">{{ errors.description }}</p>{% endif %}
+        </div>
+      </div>
+      <p><button class="btn btn-primary" type="submit">Create ticket</button></p>
+    </form>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <h1>{{ ticket.number }} - {{ ticket.title }}</h1>
+  <p>
+    <span class="badge badge-{{ ticket.priority|lower }}">{{ ticket.priority }} - {{ ticket.priority_label }}</span>
+    <span class="badge badge-{{ ticket.status_slug }}">{{ ticket.status }}</span>
+    <span class="badge badge-{{ ticket.sla_slug }}">{{ ticket.sla_state }}</span>
+  </p>
+</div>
+
+<section class="card">
+  <div class="card-head"><h2>Ticket details</h2></div>
+  <div class="card-body">
+    <div class="detail-grid">
+      <div class="detail-item"><span class="detail-label">Requester</span>{{ ticket.requester_name }}</div>
+      <div class="detail-item"><span class="detail-label">Email</span>{{ ticket.requester_email }}</div>
+      <div class="detail-item"><span class="detail-label">Category</span>{{ ticket.category }}</div>
+      <div class="detail-item"><span class="detail-label">Priority</span>{{ ticket.priority }} - {{ ticket.priority_label }}</div>
+      <div class="detail-item"><span class="detail-label">Level</span>{{ ticket.level }}</div>
+      <div class="detail-item"><span class="detail-label">Assignee</span>{{ ticket.assignee or 'Unassigned' }}</div>
+      <div class="detail-item"><span class="detail-label">Created</span>{{ ticket.created_at|ist }}</div>
+      <div class="detail-item"><span class="detail-label">Due</span>{{ ticket.due_at|ist }}</div>
+      <div class="detail-item"><span class="detail-label">Resolved</span>{{ ticket.resolved_at|ist }}</div>
+      <div class="detail-item"><span class="detail-label">SLA message</span>{{ ticket.sla_message }}</div>
+      <div class="detail-item"><span class="detail-label">KB reference</span>{{ ticket.kb_reference or '-' }}</div>
+    </div>
+    <h3>Description</h3>
+    <p class="description">{{ ticket.description }}</p>
+  </div>
+</section>
+
+<section class="card">
+  <div class="card-head"><h2>Timeline</h2></div>
+  <div class="card-body">
+    <ul class="timeline">
+      {% for event in events %}
+      <li class="timeline-item">
+        <span class="timeline-meta">{{ event.created_at|ist }} &middot; {{ event.event_type }} &middot; {{ event.actor }}</span>
+        <span class="timeline-note">{{ event.note or '-' }}</span>
+      </li>
+      {% else %}
+      <li class="empty">No events yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+
+<div class="panel-grid">
+  {% if allowed_next %}
+  <section class="card panel">
+    <div class="panel-head"><h2>Change status</h2></div>
+    <div class="card-body">
+      <form method="post" action="{{ url_for('ticket_status', ticket_id=ticket.id) }}">
+        <div class="field">
+          <label for="status_actor">Agent</label>
+          <select id="status_actor" name="actor">
+            {% for name in AGENTS %}<option value="{{ name }}">{{ name }} ({{ AGENTS[name] }})</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="new_status">New status</label>
+          <select id="new_status" name="new_status">
+            {% for status in allowed_next %}<option value="{{ status }}">{{ status }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="status_note">Note</label>
+          <textarea id="status_note" name="note" rows="3" maxlength="1000"></textarea>
+        </div>
+        <div class="field">
+          <label for="kb_reference">KB article ID or link (optional)</label>
+          <input id="kb_reference" name="kb_reference" type="text" maxlength="200" value="{{ ticket.kb_reference or '' }}">
+        </div>
+        <button class="btn btn-primary" type="submit">Update status</button>
+      </form>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if ticket.status != 'Resolved' %}
+  <section class="card panel">
+    <div class="panel-head"><h2>Assign</h2></div>
+    <div class="card-body">
+      <form method="post" action="{{ url_for('ticket_assign', ticket_id=ticket.id) }}">
+        <div class="field">
+          <label for="assign_actor">Agent</label>
+          <select id="assign_actor" name="actor">
+            {% for name in AGENTS %}<option value="{{ name }}">{{ name }} ({{ AGENTS[name] }})</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="assignee">Assign to</label>
+          <select id="assignee" name="assignee">
+            {% for name in AGENTS %}<option value="{{ name }}">{{ name }} ({{ AGENTS[name] }})</option>{% endfor %}
+          </select>
+        </div>
+        <button class="btn btn-primary" type="submit">Assign ticket</button>
+      </form>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if can_escalate %}
+  <section class="card panel">
+    <div class="panel-head"><h2>Escalate to L2</h2></div>
+    <div class="card-body">
+      <form method="post" action="{{ url_for('ticket_escalate', ticket_id=ticket.id) }}">
+        <div class="field">
+          <label for="escalate_actor">Agent</label>
+          <select id="escalate_actor" name="actor">
+            {% for name in AGENTS %}<option value="{{ name }}">{{ name }} ({{ AGENTS[name] }})</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="reason">Escalation reason</label>
+          <textarea id="reason" name="reason" rows="3" maxlength="1000" required></textarea>
+        </div>
+        <div class="field">
+          <label for="l2_assignee">L2 agent</label>
+          <select id="l2_assignee" name="l2_assignee">
+            <option value="">L2 queue (unassigned)</option>
+            {% for name in l2_agents %}<option value="{{ name }}">{{ name }}</option>{% endfor %}
+          </select>
+        </div>
+        <button class="btn btn-primary" type="submit">Escalate</button>
+      </form>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="card panel">
+    <div class="panel-head"><h2>Add note</h2></div>
+    <div class="card-body">
+      <form method="post" action="{{ url_for('ticket_note', ticket_id=ticket.id) }}">
+        <div class="field">
+          <label for="note_actor">Agent</label>
+          <select id="note_actor" name="actor">
+            {% for name in AGENTS %}<option value="{{ name }}">{{ name }} ({{ AGENTS[name] }})</option>{% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="note">Note</label>
+          <textarea id="note" name="note" rows="3" maxlength="1000"></textarea>
+        </div>
+        <button class="btn btn-primary" type="submit">Add note</button>
+      </form>
+    </div>
+  </section>
+</div>
+{% endblock %}
